@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(EDITOR)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  editedPrompts Prompt[] @relation("PromptUpdatedBy")
+
+  @@map("users")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  prompts Prompt[]
+
+  @@index([sortOrder])
+  @@map("categories")
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  prompts Prompt[]
+
+  @@map("tags")
+}
+
+/// A reusable prompt fragment. Composed output = bodies of matching
+/// fragments joined in sortOrder.
+model Prompt {
+  id          String   @id @default(cuid())
+  title       String
+  body        String
+  sortOrder   Int      @default(0)
+  /// Always included when its category is selected, regardless of tags.
+  isBase      Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  categoryId  String
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  category  Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  updatedBy User?    @relation("PromptUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  tags      Tag[]
+
+  @@index([categoryId, isActive, sortOrder])
+  @@map("prompts")
+}

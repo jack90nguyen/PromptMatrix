@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --color-canvas: #04070d;
+  --color-surface: #0a1120;
+  --color-surface-hi: #101c31;
+  --color-line: #1b2740;
+  --color-line-hi: #2c3f63;
+  --color-ink: #dbe4f0;
+  --color-ink-dim: #7d8ba5;
+  --color-accent: #22d3ee;
+  --color-accent-dim: #0b4f5e;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-canvas text-ink antialiased;
+  /* Faint 32px lattice - the "matrix" reads as structure, not decoration. */
+  background-image:
+    linear-gradient(to right, #0f1a2e 1px, transparent 1px),
+    linear-gradient(to bottom, #0f1a2e 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+::selection {
+  background: var(--color-accent-dim);
+  color: var(--color-ink);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-line-hi);
+}
+
+/* Native checkboxes render a pale box on dark, so draw our own. */
+input[type="checkbox"] {
+  @apply size-4 shrink-0 cursor-pointer appearance-none rounded border border-line bg-canvas transition;
+}
+input[type="checkbox"]:checked {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path fill='none' stroke='%2304070d' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' d='M3.5 8.5l3 3 6-6'/></svg>");
+  background-size: 100%;
+}
+input[type="checkbox"]:hover:not(:checked) {
+  @apply border-line-hi;
+}
+input[type="checkbox"]:focus-visible {
+  @apply outline-none ring-1 ring-accent;
+}
+
+/* Small uppercase mono label used for section headings. */
+.eyebrow {
+  @apply font-mono text-[11px] font-medium uppercase tracking-[0.12em] text-ink-dim;
+}

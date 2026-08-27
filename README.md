@@ -1,0 +1,140 @@
+# Prompt Matrix
+
+A library of small, reusable prompt fragments. Filter by category + tags and the
+app stitches the matching fragments into one complete prompt, ready to paste into
+an AI tool for text / image / video generation.
+
+## How composition works
+
+Pick a category, then pick tags. A fragment is pulled in when:
+
+- it is a **base fragment** (`isBase`) - always included for its category, or
+- **OR mode** (default): it carries at least one of the selected tags, or
+- **AND mode**: it carries every selected tag.
+
+Matching fragments are ordered by `sortOrder`, then title, and their bodies are
+joined with a blank line. Individual fragments can be unchecked before copying.
+
+## Screens
+
+**Composer** opens on the *matrix*: a category x tag grid where each cell is the
+number of fragments at that intersection, plus a `Base` column. Clicking a cell
+selects that category and narrows to that tag, so the grid doubles as an
+overview of where the library is thick or thin. Below it sit the category
+picker, tag chips with an OR/AND switch, the fragment checklist, and the
+composed output.
+
+**Prompts** is a measured masonry of cards - each showing the start of the body -
+filtered by category, tags (OR/AND), free text, status, and base-only. Every
+filter lives in the URL, so a view can be bookmarked or shared.
+
+**New / edit prompt** can create a category or a tag in place: the `+ New
+category` and `+ New tag` links write the row immediately and select it, so
+adding a fragment never sends you to another screen. An abandoned form can
+therefore leave an unused category or tag behind; both are deletable.
+
+## Stack
+
+- Next.js (App Router) + React + TypeScript
+- PostgreSQL + Prisma 7 (via the `@prisma/adapter-pg` driver adapter)
+- Tailwind CSS v4, dark-only theme (tokens in `src/app/globals.css`)
+- Auth: username + password in the database, signed JWT session cookie (`jose`),
+  passwords hashed with `scrypt`
+
+## Setup
+
+```bash
+npm install
+cp .env.example .env      # then fill in the values
+npx prisma generate       # the generated client is git-ignored
+npm run db:migrate        # create the schema (see the note below)
+npm run db:seed           # create the admin user + sample data
+npm run dev
+```
+
+### Migrations without CREATEDB
+
+`prisma migrate dev` needs a shadow database, so it fails with `P3014` when the
+database role cannot create databases. Two ways out:
+
+**Preferred** - grant the privilege once, as a superuser, then use `npm run db:migrate`:
+
+```sql
+ALTER ROLE your_app_role CREATEDB;
+```
+
+**Without any extra privilege** - diff the live database against the schema:
+
+```bash
+npm run db:migrate:create -- add_something   # writes prisma/migrations/<stamp>_add_something
+# read the SQL it prints
+npm run db:migrate:apply -- prisma/migrations/<stamp>_add_something
+```
+
+This still produces real migration files, so `npm run db:deploy` works in
+production. Because the diff comes from the live database rather than from the
+migration history, a column *rename* appears as `DROP` + `ADD` - which loses
+data. Always read the SQL before applying it.
+
+### Environment
+
+| Variable         | Purpose                                                  |
+| ---------------- | -------------------------------------------------------- |
+| `DATABASE_URL`   | PostgreSQL connection string                             |
+| `SESSION_SECRET` | JWT signing key - `openssl rand -hex 32`                 |
+| `ADMIN_USERNAME` | Bootstrap admin, created by `npm run db:seed`             |
+| `ADMIN_PASSWORD` | Bootstrap admin password                                  |
+
+`db:seed` is idempotent: it upserts the admin and only inserts sample data when
+no categories exist yet.
+
+## Scripts
+
+| Script              | Purpose                                       |
+| ------------------- | --------------------------------------------- |
+| `npm run dev`       | Dev server                                    |
+| `npm run build`     | Production build                              |
+| `npm run start`     | Serve the production build                    |
+| `npm run typecheck` | `tsc --noEmit`                                 |
+| `npm run db:migrate`| `prisma migrate dev` (needs CREATEDB)         |
+| `npm run db:migrate:create` | Write a migration by diffing the live DB |
+| `npm run db:migrate:apply`  | Apply and record a written migration     |
+| `npm run db:deploy` | `prisma migrate deploy` (production)          |
+| `npm run db:seed`   | Seed admin + sample data                      |
+| `npm run db:studio` | Prisma Studio                                 |
+
+Prisma is configured in `prisma7.config.ts` (Prisma 7 keeps the datasource URL
+there, not in `schema.prisma`) and talks to PostgreSQL through the
+`@prisma/adapter-pg` driver adapter. The generated client lands in
+`src/generated/prisma` and is git-ignored.
+
+`AGENTS.md` and `CLAUDE.md` at the repo root are generated by Next.js; set
+`agentRules: false` in `next.config.ts` to stop that.
+
+## Roles
+
+- `ADMIN` - everything, including user management
+- `EDITOR` - composer, prompts, categories, tags
+
+Every prompt records `updatedById`, so the list and edit screens show who last
+edited it.
+
+## Notable pieces
+
+- `src/lib/compose.ts` - fragment selection and joining. Pure functions.
+- `src/lib/matrix.ts` - category x tag aggregation. Pure functions.
+- `src/components/Masonry.tsx` - measures card heights and packs them into the
+  shortest column, which keeps reading order roughly row-major. CSS `columns`
+  fills column-by-column and would scramble that order.
+
+## Known limits
+
+- The prompt list shows the first 200 matches; narrow the filters to see more.
+- The matrix widens with the number of tags in use. It scrolls horizontally with
+  the category column pinned, but past a few dozen tags it stops being readable.
+- The matrix counts by walking every active prompt. Past ~10k prompts, move the
+  counting into SQL (see the TODO in `src/lib/matrix.ts`).
+- Sessions are stateless JWTs, so disabling a user does not kill an already-open
+  session until the token expires (7 days).
+- A prompt belongs to exactly one category. Composing across several categories
+  at once is not implemented yet.
