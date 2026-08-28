@@ -53,3 +53,8 @@ export const userUpdateSchema = z.object({
   password: z.union([z.string().min(8, "Password must be at least 8 characters"), z.literal("")]),
 });
 export type UserUpdateInput = z.infer<typeof userUpdateSchema>;
+
+export const apiKeySchema = z.object({
+  name: trimmed.min(1, "Name is required").max(60),
+});
+export type ApiKeyInput = z.infer<typeof apiKeySchema>;

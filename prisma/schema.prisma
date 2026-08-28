@@ -23,6 +23,7 @@ model User {
   updatedAt    DateTime @updatedAt
 
   editedPrompts Prompt[] @relation("PromptUpdatedBy")
+  apiKeys       ApiKey[]
 
   @@map("users")
 }
@@ -74,4 +75,22 @@ model Prompt {
 
   @@index([categoryId, isActive, sortOrder])
   @@map("prompts")
+}
+
+/// Bearer token for the public compose API. Only the SHA-256 digest is stored;
+/// the key itself is shown once, at creation, and cannot be recovered.
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String
+  /// Leading segment of the key, kept in the clear so a row is identifiable.
+  prefix      String
+  keyHash     String    @unique
+  isActive    Boolean   @default(true)
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  createdById String?
+
+  createdBy User? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@map("api_keys")
 }

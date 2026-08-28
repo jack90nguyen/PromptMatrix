@@ -34,9 +34,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               </Link>
             ))}
             {user.role === "ADMIN" && (
-              <Link href="/manage/users" className={NAV_LINK}>
-                Users
-              </Link>
+              <>
+                <Link href="/manage/users" className={NAV_LINK}>
+                  Users
+                </Link>
+                <Link href="/manage/api-keys" className={NAV_LINK}>
+                  API keys
+                </Link>
+              </>
             )}
           </nav>
 
