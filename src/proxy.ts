@@ -22,5 +22,8 @@ export default async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // `/api` is deliberately outside this guard: those routes authenticate with
+  // an API key, not the session cookie. Anything added under /api therefore has
+  // NO session protection and must check its own credentials.
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };
