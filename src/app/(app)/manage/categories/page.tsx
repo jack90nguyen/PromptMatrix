@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/current-user";
 import { Button, Card, CardTitle, Empty, ErrorText, Input, Label, PageHeader } from "@/components/ui";
+import { ConfirmForm } from "@/components/ConfirmForm";
 import { createCategory, deleteCategory, updateCategory } from "./actions";
 
 export default async function CategoriesPage({
@@ -74,12 +75,19 @@ export default async function CategoriesPage({
                 <div className="mt-2 flex items-center gap-3 font-mono text-[11px] text-ink-dim">
                   <code className="rounded bg-surface-hi px-1.5 py-0.5">{category.slug}</code>
                   <span>{category._count.prompts} prompts</span>
-                  <form action={deleteCategory}>
+                  <ConfirmForm
+                    action={deleteCategory}
+                    title="Delete category"
+                    message={
+                      category._count.prompts === 0
+                        ? `"${category.name}" holds no prompts.`
+                        : `"${category.name}" still holds ${category._count.prompts} prompt${
+                            category._count.prompts === 1 ? "" : "s"
+                          }. The database refuses to delete a category with prompts, so this will fail until you move or delete them first.`
+                    }
+                  >
                     <input type="hidden" name="id" value={category.id} />
-                    <button type="submit" className="text-red-400 transition hover:text-red-300">
-                      delete
-                    </button>
-                  </form>
+                  </ConfirmForm>
                 </div>
               </li>
             ))}

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/current-user";
 import { PageHeader } from "@/components/ui";
+import { ConfirmForm } from "@/components/ConfirmForm";
 import { PromptForm } from "../PromptForm";
 import { deletePrompt } from "../actions";
 
@@ -28,15 +29,14 @@ export default async function EditPromptPage({ params }: { params: Promise<{ id:
       <PageHeader
         title="Edit prompt"
         action={
-          <form action={deletePrompt}>
+          <ConfirmForm
+            action={deletePrompt}
+            title="Delete prompt"
+            message={`"${prompt.title}" will be removed from every composed prompt that pulls it in.`}
+            triggerLabel="Delete"
+          >
             <input type="hidden" name="id" value={prompt.id} />
-            <button
-              type="submit"
-              className="font-mono text-[11px] uppercase tracking-wider text-red-400 transition hover:text-red-300"
-            >
-              Delete
-            </button>
-          </form>
+          </ConfirmForm>
         }
       />
       {prompt.updatedBy && (

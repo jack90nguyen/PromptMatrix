@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/current-user";
 import { Button, Card, CardTitle, Empty, ErrorText, Input, Label, PageHeader } from "@/components/ui";
+import { ConfirmForm } from "@/components/ConfirmForm";
 import { createTag, deleteTag, updateTag } from "./actions";
 
 export default async function TagsPage({
@@ -57,15 +58,19 @@ export default async function TagsPage({
                 <span className="font-mono text-[11px] text-ink-dim">
                   {tag._count.prompts} prompts
                 </span>
-                <form action={deleteTag}>
+                <ConfirmForm
+                  action={deleteTag}
+                  title="Delete tag"
+                  message={
+                    tag._count.prompts === 0
+                      ? `"${tag.name}" is not used by any prompt.`
+                      : `"${tag.name}" is used by ${tag._count.prompts} prompt${
+                          tag._count.prompts === 1 ? "" : "s"
+                        }. Deleting it removes the tag from all of them; the prompts themselves stay.`
+                  }
+                >
                   <input type="hidden" name="id" value={tag.id} />
-                  <button
-                    type="submit"
-                    className="font-mono text-[11px] text-red-400 transition hover:text-red-300"
-                  >
-                    delete
-                  </button>
-                </form>
+                </ConfirmForm>
               </li>
             ))}
           </ul>
