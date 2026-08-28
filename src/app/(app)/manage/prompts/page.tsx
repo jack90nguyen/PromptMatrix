@@ -3,8 +3,10 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/current-user";
 import { Button, Card, Empty, PageHeader } from "@/components/ui";
 import type { Prisma } from "@/generated/prisma/client";
+import { buildGraph } from "@/lib/graph";
 import { PromptFilters } from "./PromptFilters";
 import { PromptGrid } from "./PromptGrid";
+import { PromptGraph } from "./PromptGraph";
 import type { PromptCardData } from "./PromptCard";
 
 const LIST_LIMIT = 200;
@@ -16,6 +18,8 @@ type Search = {
   mode?: string;
   status?: string;
   base?: string;
+  /** Absent means the graph - it is the default view. */
+  view?: string;
 };
 
 function buildWhere(search: Search): Prisma.PromptWhereInput {
@@ -55,6 +59,7 @@ export default async function PromptsPage({
   await requireUser();
   const search = await searchParams;
   const where = buildWhere(search);
+  const view = search.view === "cards" ? "cards" : "graph";
 
   const [rows, total, categories, tags] = await Promise.all([
     prisma.prompt.findMany({
@@ -63,20 +68,32 @@ export default async function PromptsPage({
       take: LIST_LIMIT,
       include: {
         category: { select: { name: true } },
-        tags: { select: { name: true }, orderBy: { name: "asc" } },
+        tags: { select: { slug: true, name: true }, orderBy: { name: "asc" } },
         updatedBy: { select: { name: true } },
       },
     }),
     prisma.prompt.count({ where }),
     prisma.category.findMany({
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: { slug: true, name: true, _count: { select: { prompts: true } } },
+      select: { id: true, slug: true, name: true, _count: { select: { prompts: true } } },
     }),
     prisma.tag.findMany({
       orderBy: { name: "asc" },
       select: { slug: true, name: true, _count: { select: { prompts: true } } },
     }),
   ]);
+
+  const graph = buildGraph(
+    categories,
+    rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      categoryId: row.categoryId,
+      isBase: row.isBase,
+      isActive: row.isActive,
+      tags: row.tags,
+    })),
+  );
 
   const prompts: PromptCardData[] = rows.map((row) => ({
     id: row.id,
@@ -119,11 +136,13 @@ export default async function PromptsPage({
         <Card>
           <Empty>No prompts match these filters.</Empty>
         </Card>
+      ) : view === "graph" ? (
+        <PromptGraph data={graph} />
       ) : (
         <PromptGrid prompts={prompts} />
       )}
 
-      {total > prompts.length && (
+      {view === "cards" && total > prompts.length && (
         <p className="mt-4 font-mono text-[11px] text-ink-dim">
           Showing {prompts.length} of {total}. Narrow the filters to see the rest.
         </p>

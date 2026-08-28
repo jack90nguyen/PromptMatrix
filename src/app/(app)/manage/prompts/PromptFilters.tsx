@@ -27,6 +27,7 @@ export function PromptFilters({
   const status = params.get("status") ?? "all";
   const baseOnly = params.get("base") === "1";
   const query = params.get("q") ?? "";
+  const view = params.get("view") === "cards" ? "cards" : "graph";
 
   const [searchDraft, setSearchDraft] = useState(query);
 
@@ -132,6 +133,20 @@ export function PromptFilters({
 
           <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
             <div>
+              <p className="eyebrow mb-1.5">View</p>
+              <div className="flex gap-1.5">
+                {(["graph", "cards"] as const).map((option) => (
+                  <Chip
+                    key={option}
+                    active={view === option}
+                    onClick={() => apply({ view: option === "graph" ? null : option })}
+                  >
+                    {option}
+                  </Chip>
+                ))}
+              </div>
+            </div>
+            <div>
               <p className="eyebrow mb-1.5">Status</p>
               <div className="flex gap-1.5">
                 {(["all", "active", "inactive"] as const).map((option) => (
@@ -157,7 +172,9 @@ export function PromptFilters({
                 <button
                   type="button"
                   onClick={() =>
-                    startTransition(() => router.push("/manage/prompts"))
+                    startTransition(() =>
+                      router.push(view === "cards" ? "/manage/prompts?view=cards" : "/manage/prompts"),
+                    )
                   }
                   className="ml-3 text-accent hover:underline"
                 >

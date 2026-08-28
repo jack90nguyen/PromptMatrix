@@ -24,9 +24,28 @@ overview of where the library is thick or thin. Below it sit the category
 picker, tag chips with an OR/AND switch, the fragment checklist, and the
 composed output.
 
-**Prompts** is a measured masonry of cards - each showing the start of the body -
-filtered by category, tags (OR/AND), free text, status, and base-only. Every
-filter lives in the URL, so a view can be bookmarked or shared.
+**Prompts** opens on a force-directed graph of the library:
+
+- a **category** is a filled circle, sized by how many prompts it holds
+- a **prompt** is a small circle in its category's colour, ringed amber when it
+  is a base fragment and faded when inactive
+- a **tag** is a hollow diamond
+
+Prompts link to their category (solid) and to every tag they carry (dashed).
+Two prompts from different categories that share a tag therefore meet at that
+tag node - two different colours converging on one diamond is exactly the
+cross-category overlap the view exists to show. Prompts are never linked to each
+other directly: a tag on N prompts would cost N(N-1)/2 edges that way, against N
+through a tag node.
+
+Drag nodes, scroll to zoom, drag the background to pan; hovering dims everything
+unconnected. Clicking a prompt opens it, clicking a category or tag filters to
+it. The sliders change the live simulation.
+
+`?view=cards` switches to a measured masonry of cards, each showing the start of
+the body. Both views share the same filters - category, tags (OR/AND), free
+text, status, base-only - and every filter lives in the URL, so a view can be
+bookmarked or shared.
 
 **New / edit prompt** can create a category or a tag in place: the `+ New
 category` and `+ New tag` links write the row immediately and select it, so
@@ -38,6 +57,7 @@ therefore leave an unused category or tag behind; both are deletable.
 - Next.js (App Router) + React + TypeScript
 - PostgreSQL + Prisma 7 (via the `@prisma/adapter-pg` driver adapter)
 - Tailwind CSS v4, dark-only theme (tokens in `src/app/globals.css`)
+- `d3-force` for the graph layout; zoom, pan and node dragging are hand-rolled
 - Auth: username + password in the database, signed JWT session cookie (`jose`),
   passwords hashed with `scrypt`
 
@@ -119,6 +139,50 @@ there, not in `schema.prisma`) and talks to PostgreSQL through the
 Every prompt records `updatedById`, so the list and edit screens show who last
 edited it.
 
+## HTTP API
+
+One read-only endpoint composes a prompt outside the UI, for n8n, Make, a
+spreadsheet, or a shell script. It runs the same `selectFragments` /
+`composePrompt` used by the composer, so the API and the screen can never drift
+apart.
+
+```
+GET /api/compose
+  key       required   API key (or send `Authorization: Bearer <key>`)
+  category  required   category slug
+  tags      optional   comma-separated tag slugs
+  mode      optional   OR (default) or AND
+  format    optional   json (default) or text
+```
+
+```bash
+curl "https://HOST/api/compose?key=pm_xxxxxxxx_...&category=product&tags=mug,upload-photo"
+curl -H "Authorization: Bearer pm_xxxxxxxx_..." \
+  "https://HOST/api/compose?category=product&tags=mug&format=text"
+```
+
+`format=json` returns the composed prompt plus the fragments that went into it;
+`format=text` returns `text/plain` and nothing else. Errors are
+`401` (missing / invalid / revoked key), `404` (unknown category) and `400`
+(bad `mode` or `format`, missing `category`).
+
+Only active prompts are visible to the API, exactly as in the composer.
+
+### API keys
+
+Admins create and revoke keys under **API keys**. A key looks like
+`pm_<8 hex>_<48 hex>`; the database stores its SHA-256 digest and a display
+prefix, never the key, so it is shown once at creation and cannot be recovered.
+Each call stamps `lastUsedAt`, which is what the list screen shows.
+
+A key passed in the query string is recorded by access logs, browser history,
+`Referer` headers and any proxy in between. The endpoint accepts an
+`Authorization: Bearer` header for callers that can send one. Revoking a key
+takes effect on the next request.
+
+**There is no rate limiting.** A leaked key can read the whole prompt library as
+fast as it likes, so treat `lastUsedAt` as the tripwire and revoke on suspicion.
+
 ## Notable pieces
 
 - `src/lib/compose.ts` - fragment selection and joining. Pure functions.
@@ -126,14 +190,28 @@ edited it.
 - `src/components/Masonry.tsx` - measures card heights and packs them into the
   shortest column, which keeps reading order roughly row-major. CSS `columns`
   fills column-by-column and would scramble that order.
+- `src/lib/graph.ts` - turns the prompt list into graph nodes and edges. Pure
+  functions.
+- `src/app/(app)/manage/prompts/PromptGraph.tsx` - the simulation. Positions are
+  written to the DOM on each tick rather than through React state, which is what
+  keeps hundreds of nodes at 60fps.
+- `src/lib/api-key.ts` - key generation and digesting.
+- `src/proxy.ts` - session guard. Note that `/api` is excluded from its matcher,
+  so any route added under `/api` must authenticate itself.
 
 ## Known limits
 
 - The prompt list shows the first 200 matches; narrow the filters to see more.
+- The graph is drawn with SVG and caps at 500 prompt nodes, saying so on screen
+  when it trims. Past that it needs a canvas renderer with manual hit-testing.
+- Categories with no prompt in the current filter are left out of the graph: an
+  isolated node carries no information.
 - The matrix widens with the number of tags in use. It scrolls horizontally with
   the category column pinned, but past a few dozen tags it stops being readable.
 - The matrix counts by walking every active prompt. Past ~10k prompts, move the
   counting into SQL (see the TODO in `src/lib/matrix.ts`).
+- The API has no rate limiting and keys carry no scope or expiry: every key can
+  read every category.
 - Sessions are stateless JWTs, so disabling a user does not kill an already-open
   session until the token expires (7 days).
 - A prompt belongs to exactly one category. Composing across several categories
