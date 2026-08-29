@@ -113,7 +113,7 @@ no categories exist yet.
 | Script              | Purpose                                       |
 | ------------------- | --------------------------------------------- |
 | `npm run dev`       | Dev server                                    |
-| `npm run build`     | Production build                              |
+| `npm run build`     | Production build (webpack - see below)        |
 | `npm run start`     | Serve the production build                    |
 | `npm run typecheck` | `tsc --noEmit`                                 |
 | `npm run db:migrate`| `prisma migrate dev` (needs CREATEDB)         |
@@ -182,6 +182,20 @@ takes effect on the next request.
 
 **There is no rate limiting.** A leaked key can read the whole prompt library as
 fast as it likes, so treat `lastUsedAt` as the tripwire and revoke on suspicion.
+
+## Why the build uses webpack
+
+`npm run build` passes `--webpack`, overriding the Turbopack default. A
+Turbopack production build externalises `pg` and `@prisma/client` under
+content-hashed specifiers - `pg-587764f78a6c7a9c` and the like - which only
+resolve against the exact `node_modules` tree that existed when the build ran.
+Deployment builds locally and ships `.next` to a server carrying its own
+prod-only tree, so those specifiers are unresolvable there and every
+database-backed route answers 500. The webpack build requires `pg` and
+`@prisma/client` by plain name, which resolves anywhere.
+
+Symptom if this is ever reverted: `Cannot find module 'pg-<hash>'` in the pm2
+log, `/login` fine, everything else 500.
 
 ## Notable pieces
 
