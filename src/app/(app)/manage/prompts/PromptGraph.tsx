@@ -37,7 +37,14 @@ const MAX_ZOOM = 4;
  * TODO: SVG holds up to roughly 500 nodes. Beyond that this needs a canvas
  * renderer with manual hit-testing.
  */
-export function PromptGraph({ data }: { data: GraphData }) {
+export function PromptGraph({
+  data,
+  onOpenPrompt,
+}: {
+  data: GraphData;
+  /** A prompt opens in a dialog; categories and tags still change the filters. */
+  onOpenPrompt: (id: string) => void;
+}) {
   const router = useRouter();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<SVGGElement>(null);
@@ -229,7 +236,7 @@ export function PromptGraph({ data }: { data: GraphData }) {
   }
 
   function open(node: GraphNode) {
-    if (node.kind === "prompt") router.push(`/manage/prompts/${node.refId}`);
+    if (node.kind === "prompt") onOpenPrompt(node.refId);
     else if (node.kind === "category") router.push(`/manage/prompts?category=${node.refId}`);
     else router.push(`/manage/prompts?tags=${node.refId}`);
   }

@@ -18,7 +18,13 @@ export type PromptCardData = {
 /** Body preview length - long enough to judge a fragment, short enough to scan. */
 const PREVIEW_CHARS = 320;
 
-export function PromptCard({ prompt }: { prompt: PromptCardData }) {
+export function PromptCard({
+  prompt,
+  onOpen,
+}: {
+  prompt: PromptCardData;
+  onOpen: (id: string) => void;
+}) {
   const preview =
     prompt.body.length > PREVIEW_CHARS
       ? `${prompt.body.slice(0, PREVIEW_CHARS).trimEnd()}...`
@@ -27,6 +33,12 @@ export function PromptCard({ prompt }: { prompt: PromptCardData }) {
   return (
     <Link
       href={`/manage/prompts/${prompt.id}`}
+      onClick={(event) => {
+        // Leave the modifier combinations alone so a new tab still works.
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        onOpen(prompt.id);
+      }}
       className="block rounded-lg border border-line bg-surface/90 transition hover:border-line-hi hover:bg-surface-hi/70"
     >
       <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">

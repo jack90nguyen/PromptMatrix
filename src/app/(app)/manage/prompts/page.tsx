@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/current-user";
-import { Button, Card, Empty, PageHeader } from "@/components/ui";
+import { Button, PageHeader } from "@/components/ui";
 import type { Prisma } from "@/generated/prisma/client";
 import { buildGraph } from "@/lib/graph";
 import { PromptFilters } from "./PromptFilters";
-import { PromptGrid } from "./PromptGrid";
-import { PromptGraph } from "./PromptGraph";
+import { PromptsView } from "./PromptsView";
 import type { PromptCardData } from "./PromptCard";
 
 const LIST_LIMIT = 200;
@@ -79,7 +78,7 @@ export default async function PromptsPage({
     }),
     prisma.tag.findMany({
       orderBy: { name: "asc" },
-      select: { slug: true, name: true, _count: { select: { prompts: true } } },
+      select: { id: true, slug: true, name: true, _count: { select: { prompts: true } } },
     }),
   ]);
 
@@ -132,15 +131,13 @@ export default async function PromptsPage({
         }))}
       />
 
-      {prompts.length === 0 ? (
-        <Card>
-          <Empty>No prompts match these filters.</Empty>
-        </Card>
-      ) : view === "graph" ? (
-        <PromptGraph data={graph} />
-      ) : (
-        <PromptGrid prompts={prompts} />
-      )}
+      <PromptsView
+        view={view}
+        graph={graph}
+        prompts={prompts}
+        categories={categories.map((item) => ({ id: item.id, name: item.name }))}
+        tags={tags.map((item) => ({ id: item.id, name: item.name }))}
+      />
 
       {view === "cards" && total > prompts.length && (
         <p className="mt-4 font-mono text-[11px] text-ink-dim">

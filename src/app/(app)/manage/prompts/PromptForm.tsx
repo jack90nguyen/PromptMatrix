@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Button,
   Card,
@@ -39,7 +40,7 @@ const BLANK: PromptDefaults = {
   tagIds: [],
 };
 
-const initialState: PromptFormState = { error: null };
+const initialState: PromptFormState = { error: null, saved: false };
 
 function byName(a: InlineOption, b: InlineOption): number {
   return a.name.localeCompare(b.name);
@@ -49,16 +50,29 @@ export function PromptForm({
   categories: initialCategories,
   tags: initialTags,
   defaults = BLANK,
+  onSaved,
+  onCancel,
 }: {
   categories: InlineOption[];
   tags: InlineOption[];
   defaults?: PromptDefaults;
+  /** Defaults to leaving for the list; a dialog closes itself instead. */
+  onSaved?: () => void;
+  onCancel?: () => void;
 }) {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(savePrompt, initialState);
   const [categories, setCategories] = useState(initialCategories);
   const [tags, setTags] = useState(initialTags);
   const [categoryId, setCategoryId] = useState(defaults.categoryId);
   const [tagIds, setTagIds] = useState<string[]>(defaults.tagIds);
+
+  useEffect(() => {
+    if (!state.saved) return;
+    if (onSaved) onSaved();
+    else router.push("/manage/prompts");
+    // Runs once per successful save: `saved` only flips on a fresh result.
+  }, [state.saved]);
 
   function toggleTag(id: string) {
     setTagIds((current) =>
@@ -103,11 +117,17 @@ export function PromptForm({
               <Button type="submit" disabled={pending}>
                 {pending ? "Saving..." : "Save"}
               </Button>
-              <Link href="/manage/prompts">
-                <Button type="button" variant="ghost">
+              {onCancel ? (
+                <Button type="button" variant="ghost" onClick={onCancel}>
                   Cancel
                 </Button>
-              </Link>
+              ) : (
+                <Link href="/manage/prompts">
+                  <Button type="button" variant="ghost">
+                    Cancel
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </Card>
