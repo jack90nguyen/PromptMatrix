@@ -197,6 +197,33 @@ database-backed route answers 500. The webpack build requires `pg` and
 Symptom if this is ever reverted: `Cannot find module 'pg-<hash>'` in the pm2
 log, `/login` fine, everything else 500.
 
+## Importing from Lark Base
+
+The CS ticket playbook lives in a Lark Base and is pulled in by
+`scripts/import-lark-tickets.ts`:
+
+```bash
+npx tsx scripts/import-lark-tickets.ts --dry-run   # report only
+npx tsx scripts/import-lark-tickets.ts             # write
+```
+
+Source is the "Ticket AI Label" table of base `MZ1NbE0H9acwOZsFfscj4SuSpuh`,
+read through `lark-cli` with the bot identity. Nothing is written back to Lark.
+
+Mapping: `Case` becomes the title, `AI Label` becomes the prompt's single tag,
+`Action tiếp theo` and `Template` are joined into the body under `Next action:`
+and `Template:` headings - they are an internal instruction and a
+customer-facing reply respectively, and running them together reads as if the
+instruction were part of the reply. A row with neither falls back to
+`Nội dung đầy đủ`. Everything lands in the existing `Ticket Label` category.
+
+The importer matches on (category, title), so re-running it after the Base
+changes updates bodies and tags instead of duplicating rows. Tags named in the
+Base are created on demand.
+
+Note the CLI exposes no page token, so the importer reads a single page of 200
+rows and fails loudly if the table has outgrown that.
+
 ## Notable pieces
 
 - `src/lib/compose.ts` - fragment selection and joining. Pure functions.
