@@ -169,7 +169,7 @@ export function GraphControls({
             Prompt labels
           </label>
           <Button type="button" variant="ghost" onClick={onReset} className="w-full">
-            Reset zoom
+            Fit to view
           </Button>
         </div>
       </Card>

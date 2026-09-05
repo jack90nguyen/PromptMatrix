@@ -12,6 +12,12 @@ function intensity(count: number, max: number): string {
   return "bg-accent-dim/25 text-accent/70";
 }
 
+/**
+ * Tags run down the side and categories across the top, because a library
+ * always ends up with far more tags than categories - 30 against 4 here - and
+ * tag names are long. With tags as columns their labels forced every column
+ * wide enough to read, and only a handful fitted on screen.
+ */
 export function MatrixGrid({
   data,
   activeCategoryId,
@@ -32,68 +38,70 @@ export function MatrixGrid({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="border-separate border-spacing-0 text-left">
+    <div className="max-h-[26rem] overflow-auto">
+      <table className="w-full border-separate border-spacing-0 text-left">
         <thead>
           <tr>
-            <th className="sticky left-0 z-10 min-w-36 bg-surface px-3 py-2 text-left">
-              <span className="eyebrow">Category</span>
+            <th className="sticky left-0 top-0 z-30 min-w-52 bg-surface px-3 py-2 text-left">
+              <span className="eyebrow">Tag</span>
             </th>
-            {data.columns.map((column) => (
-              <th key={column.slug} className="w-11 px-1.5 py-2 text-center align-bottom">
+            {data.rows.map((row) => (
+              <th
+                key={row.category.id}
+                className="sticky top-0 z-20 w-20 bg-surface px-1.5 py-2 text-center align-bottom"
+              >
                 <span
                   className={
                     "block truncate font-mono text-[10px] uppercase tracking-wider " +
-                    (column.slug === BASE_COLUMN
-                      ? "text-amber-400"
-                      : activeTagSlugs.includes(column.slug)
-                        ? "text-accent"
-                        : "text-ink-dim")
+                    (row.category.id === activeCategoryId ? "text-accent" : "text-ink-dim")
                   }
-                  title={`${column.name} (${column.total})`}
+                  title={`${row.category.name} (${row.total})`}
                 >
-                  {column.name}
+                  {row.category.name}
                 </span>
               </th>
             ))}
-            <th className="px-2 py-2 text-right">
+            <th className="sticky top-0 z-20 bg-surface px-2 py-2 text-right">
               <span className="eyebrow">All</span>
             </th>
           </tr>
         </thead>
         <tbody>
-          {data.rows.map((row) => {
-            const isActiveRow = row.category.id === activeCategoryId;
+          {data.columns.map((column) => {
+            const isBaseRow = column.slug === BASE_COLUMN;
+            const isActiveRow = isBaseRow
+              ? activeTagSlugs.length === 0
+              : activeTagSlugs.includes(column.slug);
+
             return (
-              <tr key={row.category.id}>
+              <tr key={column.slug}>
                 <td
                   className={
-                    "sticky left-0 z-10 min-w-36 max-w-56 truncate border-t border-line bg-surface px-3 py-1.5 font-mono text-[11px] " +
-                    (isActiveRow ? "text-accent" : "text-ink")
+                    "sticky left-0 z-10 min-w-52 max-w-80 truncate border-t border-line bg-surface px-3 py-1.5 font-mono text-[11px] " +
+                    (isBaseRow ? "text-amber-400" : isActiveRow ? "text-accent" : "text-ink")
                   }
-                  title={row.category.name}
+                  title={column.name}
                 >
                   {isActiveRow && <span className="mr-1 text-accent">&#9656;</span>}
-                  {row.category.name}
+                  {column.name}
                 </td>
 
-                {data.columns.map((column) => {
+                {data.rows.map((row) => {
                   const count = row.counts[column.slug] ?? 0;
-                  const selected =
-                    isActiveRow &&
-                    (column.slug === BASE_COLUMN
-                      ? activeTagSlugs.length === 0
-                      : activeTagSlugs.includes(column.slug));
+                  const selected = row.category.id === activeCategoryId && isActiveRow;
 
                   return (
-                    <td key={column.slug} className="w-11 border-t border-line px-0.5 py-1.5 text-center">
+                    <td
+                      key={row.category.id}
+                      className="w-20 border-t border-line px-1.5 py-1.5 text-center"
+                    >
                       <button
                         type="button"
                         disabled={count === 0}
                         onClick={() => onPick(row.category.id, column.slug)}
                         title={`${row.category.name} / ${column.name}: ${count}`}
                         className={
-                          "h-6 w-10 rounded font-mono text-[11px] transition " +
+                          "h-6 w-12 rounded font-mono text-[11px] transition " +
                           (count === 0
                             ? "cursor-default text-ink-dim/25"
                             : "hover:ring-1 hover:ring-accent/60 cursor-pointer ") +
@@ -108,7 +116,7 @@ export function MatrixGrid({
                 })}
 
                 <td className="border-t border-line px-2 py-1.5 text-right font-mono text-[11px] text-ink-dim">
-                  {row.total}
+                  {column.total}
                 </td>
               </tr>
             );

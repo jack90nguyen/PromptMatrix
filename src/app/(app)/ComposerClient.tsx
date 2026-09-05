@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { Button, Card, CardTitle, Chip, Empty, Label, Select } from "@/components/ui";
+import { Button, Card, CardTitle, Empty, Label, Select } from "@/components/ui";
+import { TagPicker } from "@/components/TagPicker";
 import {
   composePrompt,
   selectFragments,
@@ -163,24 +164,13 @@ export function ComposerClient({
               Tags
             </CardTitle>
             <div className="p-4">
-              {payload.tags.length === 0 ? (
-                <p className="font-mono text-[11px] text-ink-dim">
-                  {pending ? "loading..." : "No tagged fragments in this category."}
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {payload.tags.map((tag) => (
-                    <Chip
-                      key={tag.slug}
-                      active={selectedTags.includes(tag.slug)}
-                      count={tag.count}
-                      onClick={() => setSelectedTags((current) => toggle(current, tag.slug))}
-                    >
-                      {tag.name}
-                    </Chip>
-                  ))}
-                </div>
-              )}
+              <TagPicker
+                tags={payload.tags}
+                selected={selectedTags}
+                onToggle={(slug) => setSelectedTags((current) => toggle(current, slug))}
+                onClear={() => setSelectedTags([])}
+                emptyLabel={pending ? "loading..." : "No tagged fragments in this category."}
+              />
             </div>
           </Card>
 

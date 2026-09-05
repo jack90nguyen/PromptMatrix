@@ -28,6 +28,14 @@ type SimLink = SimulationLinkDatum<SimNode> & { kind: GraphLink["kind"] };
 
 const MIN_ZOOM = 0.15;
 const MAX_ZOOM = 4;
+/** Past this many nodes prompt labels collide into an unreadable mat. */
+const LABEL_LIMIT = 40;
+const FIT_PADDING = 40;
+
+/** Denser graphs need to push harder to stay legible. */
+function defaultCharge(nodeCount: number): number {
+  return Math.max(-900, -220 - nodeCount * 2);
+}
 
 /**
  * Positions are written straight onto the DOM on every simulation tick rather
@@ -52,11 +60,13 @@ export function PromptGraph({
   const linkElements = useRef<Array<SVGLineElement | null>>([]);
   const simulationRef = useRef<Simulation<SimNode, SimLink> | null>(null);
   const transform = useRef({ x: 0, y: 0, k: 1 });
+  /** One automatic framing per dataset; a drag also ends the simulation. */
+  const hasFitted = useRef(false);
   const size = useRef({ width: 0, height: 0 });
 
   const [linkDistance, setLinkDistance] = useState(60);
-  const [charge, setCharge] = useState(-220);
-  const [showLabels, setShowLabels] = useState(true);
+  const [charge, setCharge] = useState(() => defaultCharge(data.nodes.length));
+  const [showLabels, setShowLabels] = useState(() => data.nodes.length <= LABEL_LIMIT);
   const [hovered, setHovered] = useState<string | null>(null);
 
   const colorByCategory = useMemo(() => {
@@ -88,6 +98,39 @@ export function PromptGraph({
     const { x, y, k } = transform.current;
     viewportRef.current?.setAttribute("transform", `translate(${x},${y}) scale(${k})`);
   }, []);
+
+  /** Frame the whole graph, so a wide layout does not need dragging to find. */
+  const fitToView = useCallback(() => {
+    const nodes = simulationRef.current?.nodes() ?? [];
+    const { width, height } = size.current;
+    if (nodes.length === 0 || width === 0) return;
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const node of nodes) {
+      const x = node.x ?? 0;
+      const y = node.y ?? 0;
+      minX = Math.min(minX, x - node.radius);
+      minY = Math.min(minY, y - node.radius);
+      maxX = Math.max(maxX, x + node.radius);
+      maxY = Math.max(maxY, y + node.radius);
+    }
+
+    const spanX = Math.max(1, maxX - minX);
+    const spanY = Math.max(1, maxY - minY);
+    const k = Math.min(
+      MAX_ZOOM,
+      Math.max(MIN_ZOOM, Math.min((width - FIT_PADDING * 2) / spanX, (height - FIT_PADDING * 2) / spanY)),
+    );
+    transform.current = {
+      k,
+      x: width / 2 - ((minX + maxX) / 2) * k,
+      y: height / 2 - ((minY + maxY) / 2) * k,
+    };
+    applyTransform();
+  }, [applyTransform]);
 
   // Build the simulation whenever the graph itself changes.
   useEffect(() => {
@@ -131,11 +174,22 @@ export function PromptGraph({
       });
     });
 
+    // Frame the graph when the layout actually stops rather than after a fixed
+    // delay - 128 nodes are still spreading well past any guess. Only the first
+    // stop counts: dragging a node also ends the simulation, and re-framing
+    // under the user's hand would yank the view away.
+    hasFitted.current = false;
+    simulation.on("end", () => {
+      if (hasFitted.current) return;
+      hasFitted.current = true;
+      fitToView();
+    });
+
     return () => {
       simulation.stop();
       simulationRef.current = null;
     };
-  }, [data, linkDistance, charge]);
+  }, [data, linkDistance, charge, fitToView]);
 
   // Keep the centre force on the middle of whatever space we were given.
   useEffect(() => {
@@ -241,11 +295,6 @@ export function PromptGraph({
     else router.push(`/manage/prompts?tags=${node.refId}`);
   }
 
-  function resetZoom() {
-    transform.current = { x: size.current.width / 2, y: size.current.height / 2, k: 1 };
-    applyTransform();
-    simulationRef.current?.alpha(0.4).restart();
-  }
 
   const legend = useMemo(
     () =>
@@ -273,7 +322,7 @@ export function PromptGraph({
           onLinkDistance={setLinkDistance}
           onCharge={setCharge}
           onShowLabels={setShowLabels}
-          onReset={resetZoom}
+          onReset={fitToView}
         />
       </div>
 

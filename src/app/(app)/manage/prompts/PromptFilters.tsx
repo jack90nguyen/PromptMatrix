@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, Chip, Input, Select } from "@/components/ui";
+import { TagPicker } from "@/components/TagPicker";
 
 export type FilterOption = { slug: string; name: string; count: number };
 
@@ -113,22 +114,13 @@ export function PromptFilters({
                 </div>
               )}
             </div>
-            {tags.length === 0 ? (
-              <p className="font-mono text-[11px] text-ink-dim">No tags yet.</p>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {tags.map((tag) => (
-                  <Chip
-                    key={tag.slug}
-                    active={selectedTags.includes(tag.slug)}
-                    count={tag.count}
-                    onClick={() => toggleTag(tag.slug)}
-                  >
-                    {tag.name}
-                  </Chip>
-                ))}
-              </div>
-            )}
+            <TagPicker
+              tags={tags}
+              selected={selectedTags}
+              onToggle={toggleTag}
+              onClear={() => apply({ tags: null })}
+              maxHeightClass="max-h-28"
+            />
           </div>
 
           <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
