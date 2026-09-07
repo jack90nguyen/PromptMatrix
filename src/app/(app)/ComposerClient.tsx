@@ -75,8 +75,11 @@ export function ComposerClient({ categories }: { categories: Category[] }) {
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-5 lg:grid-cols-[20rem_1fr]">
-        <div className="space-y-5">
+      {/* From lg up the composer fills the viewport: the output is the thing you
+          read, so dead space below it is wasted screen. Below lg the height is
+          left to flow - pinning it there squashes the textarea to a few lines. */}
+      <div className="grid gap-5 lg:h-[calc(100dvh-8rem)] lg:grid-cols-[20rem_1fr]">
+        <div className="space-y-5 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
           <Card className="p-4">
             <Label htmlFor="category">Category</Label>
             <Select
@@ -171,7 +174,7 @@ export function ComposerClient({ categories }: { categories: Category[] }) {
           </Card>
         </div>
 
-        <Card className="flex flex-col">
+        <Card className="flex flex-col lg:min-h-0">
           <CardTitle
             right={
               <div className="flex items-center gap-3">
@@ -196,7 +199,7 @@ export function ComposerClient({ categories }: { categories: Category[] }) {
             readOnly
             value={output}
             placeholder="Pick a category and tags to build a prompt."
-            className="m-4 min-h-[24rem] flex-1 resize-y rounded-md border border-line bg-canvas p-3 font-mono text-[13px] leading-relaxed text-ink placeholder:text-ink-dim/70 outline-none focus:border-line-hi"
+            className="m-4 min-h-[24rem] flex-1 resize-y lg:min-h-0 rounded-md border border-line bg-canvas p-3 font-mono text-[13px] leading-relaxed text-ink placeholder:text-ink-dim/70 outline-none focus:border-line-hi"
           />
         </Card>
       </div>
