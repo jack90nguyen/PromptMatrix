@@ -10,28 +10,19 @@ import {
   type CategoryPayload,
   type TagMatchMode,
 } from "@/lib/compose";
-import { BASE_COLUMN, type MatrixData } from "@/lib/matrix";
-import { MatrixGrid } from "./MatrixGrid";
 import { loadCategory } from "./composer-actions";
 
 type Category = { id: string; name: string; slug: string };
 
 const EMPTY_PAYLOAD: CategoryPayload = { fragments: [], tags: [] };
 
-export function ComposerClient({
-  categories,
-  matrix,
-}: {
-  categories: Category[];
-  matrix: MatrixData;
-}) {
+export function ComposerClient({ categories }: { categories: Category[] }) {
   const [categoryId, setCategoryId] = useState<string>(categories[0]?.id ?? "");
   const [payload, setPayload] = useState<CategoryPayload>(EMPTY_PAYLOAD);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [mode, setMode] = useState<TagMatchMode>("OR");
   const [excluded, setExcluded] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
-  const [matrixOpen, setMatrixOpen] = useState(true);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -61,18 +52,6 @@ export function ComposerClient({
     return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
   }
 
-  /** A matrix cell sets the row's category, then narrows to that column. */
-  function pickCell(nextCategoryId: string, columnSlug: string) {
-    const sameCategory = nextCategoryId === categoryId;
-    if (!sameCategory) setCategoryId(nextCategoryId);
-
-    if (columnSlug === BASE_COLUMN) {
-      setSelectedTags([]);
-      return;
-    }
-    setSelectedTags((current) => (sameCategory ? toggle(current, columnSlug) : [columnSlug]));
-  }
-
   async function copy() {
     await navigator.clipboard.writeText(output);
     setCopied(true);
@@ -95,30 +74,6 @@ export function ComposerClient({
 
   return (
     <div className="space-y-5">
-      <Card>
-        <CardTitle
-          right={
-            <button
-              type="button"
-              onClick={() => setMatrixOpen((open) => !open)}
-              className="font-mono text-[11px] text-ink-dim transition hover:text-accent"
-            >
-              {matrixOpen ? "collapse" : "expand"}
-            </button>
-          }
-        >
-          Matrix
-        </CardTitle>
-        {matrixOpen && (
-          <MatrixGrid
-            data={matrix}
-            activeCategoryId={categoryId}
-            activeTagSlugs={selectedTags}
-            onPick={pickCell}
-          />
-        )}
-      </Card>
-
       <div className="grid gap-5 lg:grid-cols-[20rem_1fr]">
         <div className="space-y-5">
           <Card className="p-4">
@@ -231,7 +186,7 @@ export function ComposerClient({
           <textarea
             readOnly
             value={output}
-            placeholder="Pick a matrix cell, or a category and tags, to build a prompt."
+            placeholder="Pick a category and tags to build a prompt."
             className="m-4 min-h-[24rem] flex-1 resize-y rounded-md border border-line bg-canvas p-3 font-mono text-[13px] leading-relaxed text-ink placeholder:text-ink-dim/70 outline-none focus:border-line-hi"
           />
         </Card>

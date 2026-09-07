@@ -17,12 +17,9 @@ joined with a blank line. Individual fragments can be unchecked before copying.
 
 ## Screens
 
-**Composer** opens on the *matrix*: a category x tag grid where each cell is the
-number of fragments at that intersection, plus a `Base` column. Clicking a cell
-selects that category and narrows to that tag, so the grid doubles as an
-overview of where the library is thick or thin. Below it sit the category
-picker, tag chips with an OR/AND switch, the fragment checklist, and the
-composed output.
+**Composer** is the category picker, tag chips with an OR/AND switch, the
+fragment checklist and the composed output. Pick a category, narrow with tags,
+untick anything you do not want, copy the result.
 
 **Prompts** opens on a force-directed graph of the library:
 
@@ -227,7 +224,6 @@ rows and fails loudly if the table has outgrown that.
 ## Notable pieces
 
 - `src/lib/compose.ts` - fragment selection and joining. Pure functions.
-- `src/lib/matrix.ts` - category x tag aggregation. Pure functions.
 - `src/components/Masonry.tsx` - measures card heights and packs them into the
   shortest column, which keeps reading order roughly row-major. CSS `columns`
   fills column-by-column and would scramble that order.
@@ -247,10 +243,6 @@ rows and fails loudly if the table has outgrown that.
   when it trims. Past that it needs a canvas renderer with manual hit-testing.
 - Categories with no prompt in the current filter are left out of the graph: an
   isolated node carries no information.
-- The matrix widens with the number of tags in use. It scrolls horizontally with
-  the category column pinned, but past a few dozen tags it stops being readable.
-- The matrix counts by walking every active prompt. Past ~10k prompts, move the
-  counting into SQL (see the TODO in `src/lib/matrix.ts`).
 - The API has no rate limiting and keys carry no scope or expiry: every key can
   read every category.
 - Sessions are stateless JWTs, so disabling a user does not kill an already-open
