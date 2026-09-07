@@ -72,6 +72,8 @@ export default async function ApiKeysPage({
   &tags=mug,upload-photo    optional, comma separated
   &mode=OR                  optional, OR (default) or AND
   &format=json              optional, json (default) or text
+  &titles=1                 optional, 1 (default) prefixes each
+                            fragment with "## <title>", 0 drops it
 
 # the key may also travel as a header instead:
 curl -H "Authorization: Bearer pm_..." \\

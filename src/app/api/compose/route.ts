@@ -13,6 +13,8 @@ export type ComposeResponse = {
   category: { slug: string; name: string };
   mode: TagMatchMode;
   tags: string[];
+  /** Whether each fragment was prefixed with `## <title>`. */
+  titles: boolean;
   fragmentCount: number;
   fragments: Array<{
     id: string;
@@ -64,6 +66,14 @@ export async function GET(request: NextRequest) {
     return fail(400, "format must be json or text");
   }
 
+  // Titles are on unless explicitly switched off, and a value we do not
+  // recognise is rejected rather than quietly treated as "off".
+  const titlesParam = params.get("titles");
+  if (titlesParam !== null && !["1", "0", "true", "false"].includes(titlesParam)) {
+    return fail(400, "titles must be 1, 0, true or false");
+  }
+  const withTitles = titlesParam === null || titlesParam === "1" || titlesParam === "true";
+
   const tagSlugs = (params.get("tags") ?? "")
     .split(",")
     .map((slug) => slug.trim())
@@ -100,7 +110,7 @@ export async function GET(request: NextRequest) {
   }));
 
   const selected = selectFragments(fragments, tagSlugs, mode);
-  const prompt = composePrompt(selected);
+  const prompt = composePrompt(selected, { withTitles });
 
   // Best effort: a failed bookkeeping write must not fail the request.
   prisma.apiKey
@@ -118,6 +128,7 @@ export async function GET(request: NextRequest) {
     category: { slug: category.slug, name: category.name },
     mode,
     tags: tagSlugs,
+    titles: withTitles,
     fragmentCount: selected.length,
     fragments: selected.map((fragment) => ({
       id: fragment.id,

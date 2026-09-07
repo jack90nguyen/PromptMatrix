@@ -43,11 +43,27 @@ export function selectFragments(
   return matched.sort(byOrderThenTitle);
 }
 
-/** Join fragment bodies into the final prompt. */
-export function composePrompt(fragments: Fragment[]): string {
+export type ComposeOptions = {
+  /** Prefix each fragment with `## <title>`. On unless asked otherwise. */
+  withTitles?: boolean;
+};
+
+/**
+ * Join fragments into the final prompt. Titles are markdown H2 headings, which
+ * gives a model a visible boundary between fragments instead of one wall of
+ * text where several instructions run together.
+ */
+export function composePrompt(
+  fragments: Fragment[],
+  { withTitles = true }: ComposeOptions = {},
+): string {
   return fragments
-    .map((fragment) => fragment.body.trim())
-    .filter((body) => body.length > 0)
+    .map((fragment) => {
+      const body = fragment.body.trim();
+      if (!body) return "";
+      return withTitles ? `## ${fragment.title.trim()}\n${body}` : body;
+    })
+    .filter((part) => part.length > 0)
     .join(FRAGMENT_SEPARATOR);
 }
 

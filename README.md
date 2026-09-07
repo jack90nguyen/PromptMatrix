@@ -12,8 +12,21 @@ Pick a category, then pick tags. A fragment is pulled in when:
 - **OR mode** (default): it carries at least one of the selected tags, or
 - **AND mode**: it carries every selected tag.
 
-Matching fragments are ordered by `sortOrder`, then title, and their bodies are
-joined with a blank line. Individual fragments can be unchecked before copying.
+Matching fragments are ordered by `sortOrder`, then title, and joined with a
+blank line. Each one is prefixed with its title as a markdown H2 heading:
+
+```
+## Mug 11oz - specs and print area
+Product: 11oz ceramic mug, white glossy finish, C-handle.
+
+## Photo upload - customer requirements
+This product is personalized from a photo the customer uploads.
+```
+
+The heading gives a model a visible boundary between fragments instead of one
+wall of text where several instructions run together. It can be switched off -
+the `titles` checkbox in the composer, `titles=0` on the API. Individual
+fragments can also be unchecked before copying.
 
 ## Screens
 
@@ -150,6 +163,8 @@ GET /api/compose
   tags      optional   comma-separated tag slugs
   mode      optional   OR (default) or AND
   format    optional   json (default) or text
+  titles    optional   1 (default) prefixes each fragment with
+                       "## <title>"; 0 drops the headings
 ```
 
 ```bash
@@ -158,8 +173,9 @@ curl -H "Authorization: Bearer pm_xxxxxxxx_..." \
   "https://HOST/api/compose?category=product&tags=mug&format=text"
 ```
 
-`format=json` returns the composed prompt plus the fragments that went into it;
-`format=text` returns `text/plain` and nothing else. Errors are
+`format=json` returns the composed prompt plus the fragments that went into it
+and the `titles` setting it used; `format=text` returns `text/plain` and
+nothing else. Errors are
 `401` (missing / invalid / revoked key), `404` (unknown category) and `400`
 (bad `mode` or `format`, missing `category`).
 

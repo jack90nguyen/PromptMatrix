@@ -23,6 +23,7 @@ export function ComposerClient({ categories }: { categories: Category[] }) {
   const [mode, setMode] = useState<TagMatchMode>("OR");
   const [excluded, setExcluded] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
+  const [withTitles, setWithTitles] = useState(true);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -46,7 +47,7 @@ export function ComposerClient({ categories }: { categories: Category[] }) {
     [matched, excluded],
   );
 
-  const output = useMemo(() => composePrompt(used), [used]);
+  const output = useMemo(() => composePrompt(used, { withTitles }), [used, withTitles]);
 
   function toggle(list: string[], value: string): string[] {
     return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
@@ -174,6 +175,14 @@ export function ComposerClient({ categories }: { categories: Category[] }) {
           <CardTitle
             right={
               <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 font-mono text-[11px] text-ink-dim">
+                  <input
+                    type="checkbox"
+                    checked={withTitles}
+                    onChange={(event) => setWithTitles(event.target.checked)}
+                  />
+                  titles
+                </label>
                 <span className="font-mono text-[11px] text-ink-dim">{output.length} chars</span>
                 <Button type="button" onClick={copy} disabled={output.length === 0}>
                   {copied ? "Copied" : "Copy"}
