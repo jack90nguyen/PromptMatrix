@@ -25,5 +25,9 @@ export const config = {
   // `/api` is deliberately outside this guard: those routes authenticate with
   // an API key, not the session cookie. Anything added under /api therefore has
   // NO session protection and must check its own credentials.
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  //
+  // The icons are exempt too: they are requested by the browser on the login
+  // page itself, where there is no session yet, and guarding them just answers
+  // a redirect where an image was expected.
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|icon.png|apple-icon.png).*)"],
 };

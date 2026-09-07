@@ -1,4 +1,6 @@
+import Image from "next/image";
 import type { ComponentProps, ReactNode } from "react";
+import logoMark from "@/assets/logo.png";
 
 const FIELD =
   "w-full rounded-md border border-line bg-canvas px-3 py-2 text-sm text-ink " +
@@ -141,23 +143,16 @@ export function Chip({
   );
 }
 
-/** 3x3 lattice mark - the app's only piece of iconography. */
+/** The app mark. Sized by the caller; 24px suits the header. */
 export function Logo({ className }: { className?: string }) {
-  const cells = [0, 1, 2].flatMap((row) => [0, 1, 2].map((col) => ({ row, col })));
   return (
-    <svg viewBox="0 0 14 14" aria-hidden className={`size-3.5 ${className ?? ""}`}>
-      {cells.map(({ row, col }) => (
-        <rect
-          key={`${row}-${col}`}
-          x={col * 5}
-          y={row * 5}
-          width={4}
-          height={4}
-          rx={0.5}
-          fill="currentColor"
-          opacity={(row + col) % 2 === 0 ? 1 : 0.35}
-        />
-      ))}
-    </svg>
+    <Image
+      src={logoMark}
+      alt=""
+      priority
+      // One class, not a merge: two `size-*` utilities have equal specificity,
+      // so which one wins would depend on stylesheet order.
+      className={className ?? "size-6"}
+    />
   );
 }
