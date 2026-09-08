@@ -152,49 +152,59 @@ edited it.
 ## HTTP API
 
 One read-only endpoint composes a prompt outside the UI, for n8n, Make, a
-spreadsheet, or a shell script. It runs the same `selectFragments` /
-`composePrompt` used by the composer, so the API and the screen can never drift
-apart.
+spreadsheet or a shell script:
 
 ```
-GET /api/compose
-  key       required   API key (or send `Authorization: Bearer <key>`)
-  category  required   category slug
-  tags      optional   comma-separated tag slugs
-  mode      optional   OR (default) or AND
-  format    optional   json (default) or text
-  titles    optional   1 (default) prefixes each fragment with
-                       "## <title>"; 0 drops the headings
+GET /api/compose?key=<key>&category=<slug>&tags=<slug,slug>
 ```
+
+It runs the same `selectFragments` / `composePrompt` as the composer screen, so
+the API and the UI cannot drift apart. Keys are issued and revoked by an admin
+under **API keys**; only their SHA-256 digest is stored, so a key is shown once
+and cannot be recovered.
+
+**Full reference, in Vietnamese, for whoever is integrating: [docs/API.md](docs/API.md)** -
+every parameter, a real response body, the error table, n8n / Sheets / shell
+examples, and what to know about keys in URLs and the absent rate limit.
+
+## Deploy
+
+Runs on the sandbox box under pm2, behind an ALB that terminates TLS.
+
+| | |
+| --- | --- |
+| URL | `https://promptx.hbcommerce.co` (ALB -> instance `:3310`) |
+| Host | sandbox (`13.213.29.85`, private `172.31.30.171`) |
+| Path | `/home/ec2-user/prompt-matrix` |
+| Process | pm2 `prompt-matrix`, fork mode, `npm start` |
+| Health | `/api/health` - the ALB target group checks this |
+| Database | reached on the **private** IP, same VPC, so traffic never leaves AWS |
+
+Deploying is `/deploy prompt-matrix` through the deploy skill, whose registry
+holds the command. It builds locally and ships `.next`; the server never builds.
+See [Why the build uses webpack](#why-the-build-uses-webpack) - that flag is
+what makes a locally built artifact work on the server at all.
+
+The server keeps its own `.env` (rsync excludes it) with a different
+`SESSION_SECRET` from any dev machine, so a dev session is not valid in
+production. On a first deploy to a new box, install runtime dependencies once:
 
 ```bash
-curl "https://HOST/api/compose?key=pm_xxxxxxxx_...&category=product&tags=mug,upload-photo"
-curl -H "Authorization: Bearer pm_xxxxxxxx_..." \
-  "https://HOST/api/compose?category=product&tags=mug&format=text"
+ssh <host> 'cd prompt-matrix && npm install --omit=dev --no-save'
 ```
 
-`format=json` returns the composed prompt plus the fragments that went into it
-and the `titles` setting it used; `format=text` returns `text/plain` and
-nothing else. Errors are
-`401` (missing / invalid / revoked key), `404` (unknown category) and `400`
-(bad `mode` or `format`, missing `category`).
+`npm ci` cannot be used: the lockfile is missing the Linux variants of a
+transitive optional dependency of `@tailwindcss/oxide`, which is dev-only and
+irrelevant to the server, but `npm ci` validates the whole tree before pruning.
 
-Only active prompts are visible to the API, exactly as in the composer.
+Two things worth knowing about this environment:
 
-### API keys
-
-Admins create and revoke keys under **API keys**. A key looks like
-`pm_<8 hex>_<48 hex>`; the database stores its SHA-256 digest and a display
-prefix, never the key, so it is shown once at creation and cannot be recovered.
-Each call stamps `lastUsedAt`, which is what the list screen shows.
-
-A key passed in the query string is recorded by access logs, browser history,
-`Referer` headers and any proxy in between. The endpoint accepts an
-`Authorization: Bearer` header for callers that can send one. Revoking a key
-takes effect on the next request.
-
-**There is no rate limiting.** A leaked key can read the whole prompt library as
-fast as it likes, so treat `lastUsedAt` as the tripwire and revoke on suspicion.
+- The sandbox shares its database with development. Editing a prompt locally
+  changes production immediately; there is no staging data.
+- Port 3310 is reachable directly on the instance's public IP, over plain HTTP.
+  Session cookies are `Secure`, so logging in that way silently fails - the
+  form posts and returns to `/login`. Restrict 3310 to the ALB's security group
+  to remove the trap.
 
 ## Why the build uses webpack
 
@@ -260,7 +270,8 @@ rows and fails loudly if the table has outgrown that.
 - Categories with no prompt in the current filter are left out of the graph: an
   isolated node carries no information.
 - The API has no rate limiting and keys carry no scope or expiry: every key can
-  read every category.
+  read every category. Deliberate, for an internal tool - see
+  [docs/API.md](docs/API.md).
 - Sessions are stateless JWTs, so disabling a user does not kill an already-open
   session until the token expires (7 days).
 - A prompt belongs to exactly one category. Composing across several categories
