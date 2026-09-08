@@ -1,19 +1,22 @@
 # Prompt Matrix
 
-A library of small, reusable prompt fragments. Filter by category + tags and the
-app stitches the matching fragments into one complete prompt, ready to paste into
-an AI tool for text / image / video generation.
+Kho **mảnh prompt** (prompt fragment) nhỏ, dùng lại được. Lọc theo category +
+tag, app ghép các mảnh khớp điều kiện thành **một prompt hoàn chỉnh** để dán vào
+tool AI sinh text / ảnh / video.
 
-## How composition works
+Tài liệu API cho người tích hợp: **[docs/API.md](docs/API.md)**.
+Các quyết định đã chốt và lý do: **[MEMORY.md](MEMORY.md)**.
 
-Pick a category, then pick tags. A fragment is pulled in when:
+## Luật ghép prompt
 
-- it is a **base fragment** (`isBase`) - always included for its category, or
-- **OR mode** (default): it carries at least one of the selected tags, or
-- **AND mode**: it carries every selected tag.
+Chọn một category, rồi chọn tag. Một mảnh được lấy khi:
 
-Matching fragments are ordered by `sortOrder`, then title, and joined with a
-blank line. Each one is prefixed with its title as a markdown H2 heading:
+- nó là **base fragment** (`isBase`) — luôn được lấy cho category của nó, hoặc
+- **chế độ OR** (mặc định): nó mang ít nhất một trong các tag đã chọn, hoặc
+- **chế độ AND**: nó mang **đủ** tất cả tag đã chọn.
+
+Các mảnh khớp được sắp theo `sortOrder`, rồi tới title, và nối với nhau bằng một
+dòng trống. Mỗi mảnh có title đứng trên dưới dạng heading H2 của markdown:
 
 ```
 ## Mug 11oz - specs and print area
@@ -23,256 +26,255 @@ Product: 11oz ceramic mug, white glossy finish, C-handle.
 This product is personalized from a photo the customer uploads.
 ```
 
-The heading gives a model a visible boundary between fragments instead of one
-wall of text where several instructions run together. It can be switched off -
-the `titles` checkbox in the composer, `titles=0` on the API. Individual
-fragments can also be unchecked before copying.
+Dòng heading cho model một ranh giới nhìn thấy được giữa các mảnh, thay vì một
+khối chữ liền mà nhiều chỉ dẫn dính vào nhau. Tắt được — checkbox `titles` trong
+Composer, hoặc `titles=0` trên API. Từng mảnh cũng bỏ tick được trước khi copy.
 
-## Screens
+## Các màn hình
 
-**Composer** is the category picker, tag chips with an OR/AND switch, the
-fragment checklist and the composed output. Pick a category, narrow with tags,
-untick anything you do not want, copy the result.
+**Composer** gồm ô chọn category, các chip tag kèm công tắc OR/AND, danh sách
+mảnh có checkbox, và phần output đã ghép. Chọn category → siết lại bằng tag →
+bỏ tick mảnh không cần → copy.
 
-**Prompts** opens on a force-directed graph of the library:
+**Prompts** mở ra là graph force-directed của cả kho:
 
-- a **category** is a filled circle, sized by how many prompts it holds
-- a **prompt** is a small circle in its category's colour, ringed amber when it
-  is a base fragment and faded when inactive
-- a **tag** is a hollow diamond
+- **category** là hình tròn tô đặc, to nhỏ theo số prompt nó chứa
+- **prompt** là hình tròn nhỏ, ăn màu của category cha, có viền vàng nếu là base
+  fragment và mờ đi nếu đang inactive
+- **tag** là hình thoi rỗng ruột
 
-Prompts link to their category (solid) and to every tag they carry (dashed).
-Two prompts from different categories that share a tag therefore meet at that
-tag node - two different colours converging on one diamond is exactly the
-cross-category overlap the view exists to show. Prompts are never linked to each
-other directly: a tag on N prompts would cost N(N-1)/2 edges that way, against N
-through a tag node.
+Prompt nối vào category của nó (nét liền) và vào mọi tag nó mang (nét đứt). Nhờ
+vậy hai prompt ở hai category khác nhau mà chung tag sẽ **gặp nhau tại node
+tag** — hai màu khác nhau chụm vào một hình thoi chính là thứ view này tồn tại
+để cho thấy. Prompt **không bao giờ** nối trực tiếp với nhau: một tag có N
+prompt thì cách đó tốn N(N-1)/2 cạnh, so với N cạnh khi đi qua node tag.
 
-Drag nodes, scroll to zoom, drag the background to pan; hovering dims everything
-unconnected. Clicking a prompt opens it, clicking a category or tag filters to
-it. The sliders change the live simulation.
+Kéo node, scroll để zoom, kéo nền để pan; hover thì mọi thứ không liên quan mờ
+đi. Click prompt là mở nó ra, click category hoặc tag là lọc theo cái đó. Hai
+slider tác động vào simulation đang chạy.
 
-`?view=cards` switches to a measured masonry of cards, each showing the start of
-the body. Both views share the same filters - category, tags (OR/AND), free
-text, status, base-only - and every filter lives in the URL, so a view can be
-bookmarked or shared.
+`?view=cards` chuyển sang masonry dạng card, mỗi card hiện phần đầu của body.
+Hai view **dùng chung bộ filter** — category, tag (OR/AND), search chữ, status,
+base-only — và mọi filter nằm trong URL nên bookmark hoặc gửi link được.
 
-**New / edit prompt** can create a category or a tag in place: the `+ New
-category` and `+ New tag` links write the row immediately and select it, so
-adding a fragment never sends you to another screen. An abandoned form can
-therefore leave an unused category or tag behind; both are deletable.
+**New / edit prompt** tạo được category hoặc tag ngay tại chỗ: link `+ New
+category` và `+ New tag` ghi row vào DB luôn rồi chọn nó, nên thêm một mảnh
+không bao giờ bắt bạn rời màn hình. Đổi lại, form bỏ dở có thể để lại một
+category hoặc tag rỗng — cả hai đều xoá được.
 
 ## Stack
 
 - Next.js (App Router) + React + TypeScript
-- PostgreSQL + Prisma 7 (via the `@prisma/adapter-pg` driver adapter)
-- Tailwind CSS v4, dark-only theme (tokens in `src/app/globals.css`)
-- `d3-force` for the graph layout; zoom, pan and node dragging are hand-rolled
-- Auth: username + password in the database, signed JWT session cookie (`jose`),
-  passwords hashed with `scrypt`
+- PostgreSQL + Prisma 7 (qua driver adapter `@prisma/adapter-pg`)
+- Tailwind CSS v4, theme chỉ có dark (token trong `src/app/globals.css`)
+- `d3-force` cho layout graph; zoom, pan và kéo node thì tự viết
+- Auth: username + password trong DB, session cookie là JWT có ký (`jose`),
+  password băm bằng `scrypt`
 
-## Setup
+## Cài đặt
 
 ```bash
 npm install
-cp .env.example .env      # then fill in the values
-npx prisma generate       # the generated client is git-ignored
-npm run db:migrate        # create the schema (see the note below)
-npm run db:seed           # create the admin user + sample data
+cp .env.example .env      # roi dien gia tri vao
+npx prisma generate       # client sinh ra bi git-ignore
+npm run db:migrate        # tao schema (doc luu y ben duoi)
+npm run db:seed           # tao admin + data mau
 npm run dev
 ```
 
-### Migrations without CREATEDB
+### Migration khi role không có CREATEDB
 
-`prisma migrate dev` needs a shadow database, so it fails with `P3014` when the
-database role cannot create databases. Two ways out:
+`prisma migrate dev` cần một shadow database, nên nó fail với `P3014` khi role
+DB không có quyền tạo database. Hai đường:
 
-**Preferred** - grant the privilege once, as a superuser, then use `npm run db:migrate`:
+**Nên làm** — cấp quyền một lần bằng user superuser, rồi dùng
+`npm run db:migrate`:
 
 ```sql
 ALTER ROLE your_app_role CREATEDB;
 ```
 
-**Without any extra privilege** - diff the live database against the schema:
+**Không cần thêm quyền gì** — diff DB đang chạy với schema:
 
 ```bash
-npm run db:migrate:create -- add_something   # writes prisma/migrations/<stamp>_add_something
-# read the SQL it prints
+npm run db:migrate:create -- add_something   # ghi ra prisma/migrations/<stamp>_add_something
+# doc ky SQL no in ra
 npm run db:migrate:apply -- prisma/migrations/<stamp>_add_something
 ```
 
-This still produces real migration files, so `npm run db:deploy` works in
-production. Because the diff comes from the live database rather than from the
-migration history, a column *rename* appears as `DROP` + `ADD` - which loses
-data. Always read the SQL before applying it.
+Cách này vẫn sinh ra migration file thật, nên `npm run db:deploy` lúc lên
+production vẫn đúng chuẩn. Nhưng vì diff lấy từ DB đang chạy chứ không từ lịch
+sử migration, **đổi tên một column sẽ ra thành `DROP` + `ADD` — tức là mất
+data**. Luôn đọc SQL trước khi apply.
 
-### Environment
+### Biến môi trường
 
-| Variable         | Purpose                                                  |
-| ---------------- | -------------------------------------------------------- |
-| `DATABASE_URL`   | PostgreSQL connection string                             |
-| `SESSION_SECRET` | JWT signing key - `openssl rand -hex 32`                 |
-| `ADMIN_USERNAME` | Bootstrap admin, created by `npm run db:seed`             |
-| `ADMIN_PASSWORD` | Bootstrap admin password                                  |
+| Biến             | Công dụng                                          |
+| ---------------- | -------------------------------------------------- |
+| `DATABASE_URL`   | Connection string PostgreSQL                       |
+| `SESSION_SECRET` | Khoá ký JWT — sinh bằng `openssl rand -hex 32`     |
+| `ADMIN_USERNAME` | Admin khởi tạo, do `npm run db:seed` tạo ra        |
+| `ADMIN_PASSWORD` | Password của admin khởi tạo                        |
 
-`db:seed` is idempotent: it upserts the admin and only inserts sample data when
-no categories exist yet.
+`db:seed` idempotent: nó upsert admin, và chỉ chèn data mẫu khi chưa có category
+nào.
 
 ## Scripts
 
-| Script              | Purpose                                       |
-| ------------------- | --------------------------------------------- |
-| `npm run dev`       | Dev server                                    |
-| `npm run build`     | Production build (webpack - see below)        |
-| `npm run start`     | Serve the production build                    |
-| `npm run typecheck` | `tsc --noEmit`                                 |
-| `npm run db:migrate`| `prisma migrate dev` (needs CREATEDB)         |
-| `npm run db:migrate:create` | Write a migration by diffing the live DB |
-| `npm run db:migrate:apply`  | Apply and record a written migration     |
-| `npm run db:deploy` | `prisma migrate deploy` (production)          |
-| `npm run db:seed`   | Seed admin + sample data                      |
-| `npm run db:studio` | Prisma Studio                                 |
+| Script                      | Công dụng                                   |
+| --------------------------- | ------------------------------------------- |
+| `npm run dev`               | Dev server                                  |
+| `npm run build`             | Build production (webpack — xem mục dưới)   |
+| `npm run start`             | Chạy bản build production                   |
+| `npm run typecheck`         | `tsc --noEmit`                              |
+| `npm run db:migrate`        | `prisma migrate dev` (cần CREATEDB)         |
+| `npm run db:migrate:create` | Sinh migration bằng cách diff DB đang chạy  |
+| `npm run db:migrate:apply`  | Apply và ghi nhận migration đã sinh         |
+| `npm run db:deploy`         | `prisma migrate deploy` (production)        |
+| `npm run db:seed`           | Seed admin + data mẫu                       |
+| `npm run db:studio`         | Prisma Studio                               |
 
-Prisma is configured in `prisma7.config.ts` (Prisma 7 keeps the datasource URL
-there, not in `schema.prisma`) and talks to PostgreSQL through the
-`@prisma/adapter-pg` driver adapter. The generated client lands in
-`src/generated/prisma` and is git-ignored.
+Prisma cấu hình trong `prisma7.config.ts` (Prisma 7 giữ datasource URL ở đó,
+không nằm trong `schema.prisma`) và nói chuyện với PostgreSQL qua driver adapter
+`@prisma/adapter-pg`. Client sinh ra nằm ở `src/generated/prisma` và bị
+git-ignore.
 
-`AGENTS.md` and `CLAUDE.md` at the repo root are generated by Next.js; set
-`agentRules: false` in `next.config.ts` to stop that.
+`AGENTS.md` với `CLAUDE.md` ở root repo là do Next.js tự sinh; đặt
+`agentRules: false` trong `next.config.ts` để nó thôi sinh nữa.
 
-## Roles
+## Phân quyền
 
-- `ADMIN` - everything, including user management
-- `EDITOR` - composer, prompts, categories, tags
+- `ADMIN` — làm được mọi thứ, kể cả quản lý user
+- `EDITOR` — composer, prompts, categories, tags
 
-Every prompt records `updatedById`, so the list and edit screens show who last
-edited it.
+Mỗi prompt lưu `updatedById`, nên màn danh sách và màn edit hiện được ai sửa
+cuối cùng.
 
 ## HTTP API
 
-One read-only endpoint composes a prompt outside the UI, for n8n, Make, a
-spreadsheet or a shell script:
+Một endpoint duy nhất, chỉ đọc, ghép prompt ở ngoài giao diện web — cho n8n,
+Make, spreadsheet hay script shell:
 
 ```
 GET /api/compose?key=<key>&category=<slug>&tags=<slug,slug>
 ```
 
-It runs the same `selectFragments` / `composePrompt` as the composer screen, so
-the API and the UI cannot drift apart. Keys are issued and revoked by an admin
-under **API keys**; only their SHA-256 digest is stored, so a key is shown once
-and cannot be recovered.
+Nó chạy đúng cùng `selectFragments` / `composePrompt` mà màn Composer dùng, nên
+API và UI không thể lệch kết quả nhau. Key do ADMIN cấp và thu hồi ở màn **API
+keys**; DB chỉ lưu bản băm SHA-256 nên key chỉ hiện một lần và không lấy lại
+được.
 
-**Full reference, in Vietnamese, for whoever is integrating: [docs/API.md](docs/API.md)** -
-every parameter, a real response body, the error table, n8n / Sheets / shell
-examples, and what to know about keys in URLs and the absent rate limit.
+**Tài liệu đầy đủ cho người tích hợp: [docs/API.md](docs/API.md)** — từng tham
+số, response body thật, bảng mã lỗi, ví dụ n8n / Sheets / shell, và những điều
+cần biết về việc để key trong URL cùng chuyện không có rate limit.
 
 ## Deploy
 
-Runs on the sandbox box under pm2, behind an ALB that terminates TLS.
+Chạy trên server sandbox dưới pm2, phía trước là ALB terminate TLS.
 
 | | |
 | --- | --- |
-| URL | `https://promptx.hbcommerce.co` (ALB -> instance `:3310`) |
+| URL | `https://promptx.hbcommerce.co` (ALB → instance `:3310`) |
 | Host | sandbox (`13.213.29.85`, private `172.31.30.171`) |
 | Path | `/home/ec2-user/prompt-matrix` |
 | Process | pm2 `prompt-matrix`, fork mode, `npm start` |
-| Health | `/api/health` - the ALB target group checks this |
-| Database | reached on the **private** IP, same VPC, so traffic never leaves AWS |
+| Health | `/api/health` — ALB target group check đường này |
+| Database | đi qua IP **private**, cùng VPC, traffic không ra internet |
 
-Deploying is `/deploy prompt-matrix` through the deploy skill, whose registry
-holds the command. It builds locally and ships `.next`; the server never builds.
-See [Why the build uses webpack](#why-the-build-uses-webpack) - that flag is
-what makes a locally built artifact work on the server at all.
+Deploy bằng `/deploy prompt-matrix` qua skill deploy, câu lệnh nằm trong registry
+của skill đó. Nó **build ở máy local rồi ship `.next` lên; server không build**.
+Xem [Vì sao build bằng webpack](#vì-sao-build-bằng-webpack) — chính cái cờ đó
+mới làm artifact build ở local chạy được trên server.
 
-The server keeps its own `.env` (rsync excludes it) with a different
-`SESSION_SECRET` from any dev machine, so a dev session is not valid in
-production. On a first deploy to a new box, install runtime dependencies once:
+Server giữ `.env` riêng của nó (rsync loại trừ file này), với `SESSION_SECRET`
+khác máy dev, nên session dev không dùng được trên production. Lần đầu deploy
+lên một máy mới, cài dependency runtime một lần:
 
 ```bash
 ssh <host> 'cd prompt-matrix && npm install --omit=dev --no-save'
 ```
 
-`npm ci` cannot be used: the lockfile is missing the Linux variants of a
-transitive optional dependency of `@tailwindcss/oxide`, which is dev-only and
-irrelevant to the server, but `npm ci` validates the whole tree before pruning.
+Không dùng được `npm ci`: lockfile thiếu biến thể Linux của một optional
+dependency gián tiếp thuộc `@tailwindcss/oxide` — thứ này chỉ dùng ở dev và
+server chẳng cần, nhưng `npm ci` validate toàn bộ cây trước khi prune nên nó
+vẫn fail.
 
-Two things worth knowing about this environment:
+Hai điều cần biết về môi trường này:
 
-- The sandbox shares its database with development. Editing a prompt locally
-  changes production immediately; there is no staging data.
-- Port 3310 is reachable directly on the instance's public IP, over plain HTTP.
-  Session cookies are `Secure`, so logging in that way silently fails - the
-  form posts and returns to `/login`. Restrict 3310 to the ALB's security group
-  to remove the trap.
+- **Sandbox dùng chung database với dev.** Sửa một prompt ở local là production
+  đổi theo ngay; không có data staging.
+- **Port 3310 vào thẳng được bằng public IP của instance, qua HTTP thuần.**
+  Session cookie có cờ `Secure` nên đăng nhập đường đó **fail âm thầm** — form
+  submit rồi quay về `/login` mà không báo lỗi gì. Siết 3310 cho chỉ nhận từ
+  security group của ALB là hết bẫy.
 
-## Why the build uses webpack
+## Vì sao build bằng webpack
 
-`npm run build` passes `--webpack`, overriding the Turbopack default. A
-Turbopack production build externalises `pg` and `@prisma/client` under
-content-hashed specifiers - `pg-587764f78a6c7a9c` and the like - which only
-resolve against the exact `node_modules` tree that existed when the build ran.
-Deployment builds locally and ships `.next` to a server carrying its own
-prod-only tree, so those specifiers are unresolvable there and every
-database-backed route answers 500. The webpack build requires `pg` and
-`@prisma/client` by plain name, which resolves anywhere.
+`npm run build` truyền `--webpack`, ghi đè mặc định Turbopack. Bản build
+production của Turbopack externalise `pg` và `@prisma/client` thành specifier
+gắn hash nội dung — kiểu `pg-587764f78a6c7a9c` — và chúng **chỉ** resolve được
+với đúng cây `node_modules` tồn tại lúc build. Luồng deploy build ở local rồi
+ship `.next` sang server, nơi có cây prod-only riêng, nên trên đó những
+specifier ấy không tồn tại và mọi route cần DB trả 500. Bản build webpack
+require `pg` và `@prisma/client` bằng tên thường, resolve ở đâu cũng được.
 
-Symptom if this is ever reverted: `Cannot find module 'pg-<hash>'` in the pm2
-log, `/login` fine, everything else 500.
+Triệu chứng nếu ai đó gỡ cờ này: log pm2 đầy `Cannot find module 'pg-<hash>'`,
+`/login` vẫn ổn, còn lại 500 hết.
 
-## Importing from Lark Base
+## Import từ Lark Base
 
-The CS ticket playbook lives in a Lark Base and is pulled in by
+Kho playbook ticket CS nằm trong một Lark Base, kéo về bằng
 `scripts/import-lark-tickets.ts`:
 
 ```bash
-npx tsx scripts/import-lark-tickets.ts --dry-run   # report only
-npx tsx scripts/import-lark-tickets.ts             # write
+npx tsx scripts/import-lark-tickets.ts --dry-run   # chi bao cao, khong ghi
+npx tsx scripts/import-lark-tickets.ts             # ghi that
 ```
 
-Source is the "Ticket AI Label" table of base `MZ1NbE0H9acwOZsFfscj4SuSpuh`,
-read through `lark-cli` with the bot identity. Nothing is written back to Lark.
+Nguồn là bảng "Ticket AI Label" của base `MZ1NbE0H9acwOZsFfscj4SuSpuh`, đọc qua
+`lark-cli` bằng bot identity. **Không ghi gì trở lại Lark.**
 
-Mapping: `Case` becomes the title, `AI Label` becomes the prompt's single tag,
-`Action tiếp theo` and `Template` are joined into the body under `Next action:`
-and `Template:` headings - they are an internal instruction and a
-customer-facing reply respectively, and running them together reads as if the
-instruction were part of the reply. A row with neither falls back to
-`Nội dung đầy đủ`. Everything lands in the existing `Ticket Label` category.
+Mapping: `Case` thành title, `AI Label` thành tag duy nhất của prompt,
+`Action tiếp theo` và `Template` ghép vào body dưới hai heading `Next action:`
+và `Template:` — cái đầu là chỉ dẫn nội bộ, cái sau là câu trả lời gửi khách, mà
+nối liền nhau thì đọc như thể chỉ dẫn cũng là một phần của câu trả lời. Dòng nào
+rỗng cả hai thì lấy `Nội dung đầy đủ` làm body. Tất cả vào category `Ticket
+Label` đã có.
 
-The importer matches on (category, title), so re-running it after the Base
-changes updates bodies and tags instead of duplicating rows. Tags named in the
-Base are created on demand.
+Importer match theo (category, title), nên chạy lại sau khi Base thay đổi là nó
+update body và tag chứ không sinh row trùng. Tag nào Base nhắc tới mà DB chưa có
+thì nó tạo.
 
-Note the CLI exposes no page token, so the importer reads a single page of 200
-rows and fails loudly if the table has outgrown that.
+Lưu ý: `lark-cli` không expose page token, nên importer đọc đúng một trang 200
+dòng và **fail rõ ràng** nếu bảng đã vượt số đó.
 
-## Notable pieces
+## Những chỗ đáng đọc trong code
 
-- `src/lib/compose.ts` - fragment selection and joining. Pure functions.
-- `src/components/Masonry.tsx` - measures card heights and packs them into the
-  shortest column, which keeps reading order roughly row-major. CSS `columns`
-  fills column-by-column and would scramble that order.
-- `src/lib/graph.ts` - turns the prompt list into graph nodes and edges. Pure
-  functions.
-- `src/app/(app)/manage/prompts/PromptGraph.tsx` - the simulation. Positions are
-  written to the DOM on each tick rather than through React state, which is what
-  keeps hundreds of nodes at 60fps.
-- `src/lib/api-key.ts` - key generation and digesting.
-- `src/proxy.ts` - session guard. Note that `/api` is excluded from its matcher,
-  so any route added under `/api` must authenticate itself.
+- `src/lib/compose.ts` — chọn mảnh và ghép chúng lại. Pure function.
+- `src/components/Masonry.tsx` — đo chiều cao card thật rồi nhồi vào cột ngắn
+  nhất, nhờ vậy thứ tự đọc vẫn gần với row-major. CSS `columns` xếp theo từng
+  cột nên sẽ làm thứ tự đó lộn xộn.
+- `src/lib/graph.ts` — biến danh sách prompt thành node và edge của graph. Pure
+  function.
+- `src/app/(app)/manage/prompts/PromptGraph.tsx` — phần simulation. Vị trí node
+  ghi trực tiếp vào DOM mỗi tick chứ không qua React state; đây chính là thứ giữ
+  cho vài trăm node vẫn 60fps.
+- `src/lib/api-key.ts` — sinh key và băm key.
+- `src/proxy.ts` — lớp chặn session. Lưu ý `/api` **nằm ngoài** matcher của nó,
+  nên bất kỳ route nào thêm dưới `/api` đều phải tự xác thực.
 
-## Known limits
+## Giới hạn đã biết
 
-- The prompt list shows the first 200 matches; narrow the filters to see more.
-- The graph is drawn with SVG and caps at 500 prompt nodes, saying so on screen
-  when it trims. Past that it needs a canvas renderer with manual hit-testing.
-- Categories with no prompt in the current filter are left out of the graph: an
-  isolated node carries no information.
-- The API has no rate limiting and keys carry no scope or expiry: every key can
-  read every category. Deliberate, for an internal tool - see
+- Màn danh sách prompt chỉ hiện 200 kết quả đầu; siết filter lại để thấy phần
+  còn lại.
+- Graph vẽ bằng SVG và chặn ở 500 node prompt, vượt thì **báo rõ trên màn hình**
+  chứ không cắt lén. Muốn hơn nữa thì phải chuyển sang canvas và tự hit-test.
+- Category không có prompt nào trong filter hiện tại thì bị bỏ khỏi graph: một
+  node cô lập không mang thông tin gì.
+- API **không có rate limit**, và key **không có scope hay hạn dùng**: key nào
+  cũng đọc được mọi category. Đây là quyết định có chủ ý cho tool nội bộ — xem
   [docs/API.md](docs/API.md).
-- Sessions are stateless JWTs, so disabling a user does not kill an already-open
-  session until the token expires (7 days).
-- A prompt belongs to exactly one category. Composing across several categories
-  at once is not implemented yet.
+- Session là JWT stateless, nên vô hiệu hoá một user **không** đá session đang
+  mở ra ngay; phải chờ token hết hạn (7 ngày).
+- Một prompt chỉ thuộc đúng một category. Ghép prompt xuyên nhiều category cùng
+  lúc thì chưa làm.

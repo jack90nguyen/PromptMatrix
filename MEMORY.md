@@ -9,8 +9,7 @@ mấy thứ bên dưới — phần lớn đã được cân nhắc rồi, khôn
   `@prisma/client` thành tên gắn hash (`pg-587764f78a6c7a9c`), chỉ resolve được
   với đúng cây `node_modules` lúc build. Deploy build ở local rồi ship `.next`
   sang server có cây prod-only riêng → mọi route cần DB trả 500, log đầy
-  `Cannot find module 'pg-<hash>'`. Chi tiết: README mục *Why the build uses
-  webpack*.
+  `Cannot find module 'pg-<hash>'`. Chi tiết: README mục *Vì sao build bằng webpack*.
 - **Server không build.** Build ở máy dev, rsync `.next` sang. Lần đầu trên máy
   mới phải `npm install --omit=dev --no-save` — không dùng được `npm ci` vì
   lockfile thiếu biến thể Linux của optional dep thuộc `@tailwindcss/oxide`.
@@ -64,7 +63,7 @@ mấy thứ bên dưới — phần lớn đã được cân nhắc rồi, khôn
 
 - Kho prompt CS import từ Lark Base, bảng *Ticket AI Label*. Script
   `scripts/import-lark-tickets.ts`, **chạy lại được** (match theo category +
-  title). Mapping và giới hạn: README mục *Importing from Lark Base*.
+  title). Mapping và giới hạn: README mục *Import từ Lark Base*.
 - **Tồn đọng đã biết:** 91 prompt nằm trong đúng 1 category `Ticket Label`, nên
   graph là hình sao 91 tia — đúng hình của data, code không chữa được. Tách
   category ra mới có nghĩa; cột `AI Label` trong Lark đã sẵn cấu trúc 2 tầng.
